@@ -1,0 +1,169 @@
+{
+  "protocolVersion": "ITSU-KNOWLEDGE-09-1.0",
+  "rubricVersion": "BACKEND-01-08-K1",
+  "evaluationId": "K09-yeneilyseijas-itsu-e02d148",
+  "studentId": "yeneilyseijas-itsu",
+  "commit": "e02d148",
+  "variant": "B",
+  "status": "COMPLETE",
+  "action": "SUPPORT",
+  "progressSinceLast": {
+    "status": "MODERATE_IMPROVEMENT",
+    "summary": "Muestra mejor disposición para identificar módulos específicos y conectar conceptos de autorización y transacciones, aunque mantiene confusión en el flujo de ejecución entre rutas, servicios y mappers.",
+    "addressedTopics": [
+      "Diferenciación conceptual entre autenticación y autorización",
+      "Rol de las políticas de acceso y tokens JWT"
+    ],
+    "unresolvedTopics": [
+      "Flujo de capas HTTP y desacoplamiento de objetos req/res",
+      "Mecanismos de atomicidad en persistencia relacional (transacciones/rollback)"
+    ]
+  },
+  "questions": [
+    {
+      "questionId": "Q1",
+      "topics": [
+        "HTTP",
+        "request flow"
+      ],
+      "levels": {
+        "conceptual": 1,
+        "grounding": 2,
+        "reasoning": 1,
+        "verification": 2
+      },
+      "evidence": [
+        "primero va el servicio... despues el mapper... y despues las rutas",
+        "en el archivo de routes pasa a operar puramente con los datos de solicitud"
+      ],
+      "strength": "Identifica los nombres de los módulos principales del proyecto (routes, service, mapper).",
+      "gap": "Invierte la secuencia real del flujo de ejecución HTTP y ubica incorrectamente el desacoplamiento de `req`/`res` en las rutas.",
+      "rectification": "Las peticiones llegan primero a la capa de rutas/módulos HTTP, que extraen los datos de `req` y se los pasan al servicio (donde la lógica opera sin dependencias del protocolo HTTP).",
+      "confidence": "high"
+    },
+    {
+      "questionId": "Q2",
+      "topics": [
+        "transactions",
+        "atomicity",
+        "data integrity"
+      ],
+      "levels": {
+        "conceptual": 2,
+        "grounding": 2,
+        "reasoning": 2,
+        "verification": 2
+      },
+      "evidence": [
+        "deberia cancelar la actualizacion y reportar el error",
+        "se realiza en service al ser uno (o el unico incluso) de los archivos que menciona el history",
+        "al ser stateless, la base de datos no recuerda la informacion anterior"
+      ],
+      "strength": "Reconoce intuitivamente la necesidad de revertir cambios y señala que el servicio coordina la historia.",
+      "gap": "Confunde la naturaleza stateless de HTTP con el estado y persistencia de la base de datos.",
+      "rectification": "Que HTTP sea stateless no justifica inconsistencias; las transacciones de BD aseguran la atomicidad (ACID) independientemente del protocolo.",
+      "confidence": "high"
+    },
+    {
+      "questionId": "Q3",
+      "topics": [
+        "authentication",
+        "authorization",
+        "JWT"
+      ],
+      "levels": {
+        "conceptual": 2,
+        "grounding": 2,
+        "reasoning": 2,
+        "verification": 2
+      },
+      "evidence": [
+        "la autorizacion es el permiso para modificar ese algo. Se podria decir que esa informacion se encuentra en el archivo policy",
+        "en authenticate se verifica el token",
+        "se puede tomar en cuenta el rol del usuario que envio el token"
+      ],
+      "strength": "Asocia correctamente `authenticate` con el JWT, `policy` con la autorización y menciona el chequeo del rol del usuario.",
+      "gap": "Dificultad para formular de manera precisa el concepto técnico de autenticación frente a autorización.",
+      "rectification": "La autenticación verifica la identidad (quién eres) y la autorización valida si esa identidad tiene permiso sobre una acción/recurso específico.",
+      "confidence": "high"
+    },
+    {
+      "questionId": "Q4",
+      "topics": [
+        "debugging",
+        "state transition",
+        "root cause"
+      ],
+      "levels": {
+        "conceptual": 1,
+        "grounding": 2,
+        "reasoning": 1,
+        "verification": 2
+      },
+      "evidence": [
+        "responde 200 cuando debió reportar un fallo por conflicto",
+        "en la parte de la peticion... o no esta bien desarrollada la respuesta",
+        "la raiz podria ser un mal desarroto en el status y se deberia corregir en el authenticate"
+      ],
+      "strength": "Distingue el síntoma del fallo en la respuesta HTTP (200 OK en lugar de 409 Conflict).",
+      "gap": "Confunde la ubicación de la corrección sugiriendo el middleware de autenticación para una falla de lógica de estados.",
+      "rectification": "Las reglas de transición de estado pertenecen a `request-status.js` / servicio de solicitudes, no a la autenticación.",
+      "confidence": "high"
+    },
+    {
+      "questionId": "Q5",
+      "topics": [
+        "requirements analysis",
+        "authorization controls",
+        "API design"
+      ],
+      "levels": {
+        "conceptual": 2,
+        "grounding": 2,
+        "reasoning": 2,
+        "verification": 2
+      },
+      "evidence": [
+        "habria que darle un permiso especifico al rol de agent para que pueda ejecutar ?assingnes=me y no ocurran errores cuando un usuario que no tenga ese rol no pueda acceder"
+      ],
+      "strength": "Identifica la necesidad de restringir o controlar el acceso según el rol antes de implementar la funcionalidad.",
+      "gap": "Cubre el aspecto de autorización pero omite preguntas sobre el comportamiento ante usuarios sin asignar o resolución de `me` a ID de usuario.",
+      "rectification": "Además de la autorización, hay que definir cómo el backend mapea `me` al `user.id` autenticado y qué HTTP status retornar si un rol no autorizado usa el filtro.",
+      "confidence": "high"
+    }
+  ],
+  "priorityGaps": [
+    "Flujo de capas HTTP: la petición entra por las rutas/controladores antes de llegar a los servicios.",
+    "Atomicidad en persistenia: transacciones de base de datos y concepto de 'stateless' en HTTP.",
+    "Aislamiento de responsabilidades: separar lógica de autenticación (JWT) de validaciones del dominio (transición de estados)."
+  ],
+  "strengths": [
+    "Ubicación acertada de los módulos clave del proyecto (`authenticate.js`, `request.policy.js`, `requests.service.js`).",
+    "Atención a la seguridad de roles antes de habilitar nuevos filtros o endpoints.",
+    "Identificación clara de los síntomas visibles en los tests de regresión."
+  ],
+  "recommendedStudyActions": [
+    "Trazar en papel el camino que sigue un objeto Express (req, res) desde el router hasta el store/base de datos.",
+    "Repasar el uso de `BEGIN`, `COMMIT` y `ROLLBACK` en `src/database/transaction.js` para asegurar atomicidad.",
+    "Analizar el archivo `src/modules/requests/request-status.js` para comprender las matrices de transiciones de estado válidas."
+  ],
+  "reviewSignals": [
+    "SUPPORT_RECOMMENDED"
+  ],
+  "teacherReview": {
+    "priority": "medium",
+    "oralVerificationRecommended": false,
+    "questions": [
+      "¿En qué capa o archivo de Express se reciben los objetos 'req' y 'res', y por qué el servicio no debe manipularlos?",
+      "Si falla la inserción en 'request_history', ¿qué comando SQL o mecanismo de base de datos impide que la tabla 'requests' quede modificada?",
+      "¿Por qué un problema de transición de estados entre 'closed' y 'open' debe solucionarse en 'request-status.js' y no en 'authenticate.js'?"
+    ],
+    "minimumExpectedAnswers": [
+      "En la capa de rutas/controladores (routes). El servicio no los usa para mantenerse desacoplado del protocolo HTTP.",
+      "Una transacción de base de datos (`BEGIN` / `ROLLBACK`).",
+      "Porque `authenticate.js` solo valida tokens e identidad, mientras que `request-status.js` contiene las reglas de negocio sobre estados permitidos."
+    ],
+    "reason": "La estudiante comprende el propósito general de los archivos pero confunde la dirección del flujo HTTP y la frontera de responsabilidades entre middleware de seguridad y lógica de negocio.",
+    "digest": "La estudiante identifica los archivos clave del repositorio, pero confunde el orden del flujo de capas en Express y la separación entre seguridad (JWT) y reglas de dominio (estados y transacciones)."
+  }
+}
